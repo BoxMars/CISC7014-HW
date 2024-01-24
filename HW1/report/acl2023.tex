@@ -6,7 +6,7 @@
 
 % Remove the "review" option to generate the final version.
 \usepackage{ACL2023}
-
+\usepackage{graphicx}
 % Standard package includes
 \usepackage{times}
 \usepackage{latexsym}
@@ -30,7 +30,34 @@
 % the typewriter font.
 \usepackage{inconsolata}
 
+\usepackage{listings}
+\usepackage{xcolor}
 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
 %\setlength\titlebox{<dim>}
@@ -61,7 +88,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-
+  In this project, we implement a k-NN classifier to recognize the images in CIFAR-10 dataset. We use different image processing methods to preprocess the dataset, and use different distance metrics to test the performance of the classifier. We also implement a k-NN with PCA classifier, SVM and NN, to compare the performance of the k-NN.
 \end{abstract}
 
 \section{Introduction}
@@ -75,7 +102,33 @@ Not only k-NN classifier, we will also implement a k-NN with PCA classifier, SVM
 We use Python to implement the project, and the code is available at Github\footnote{\url{https://github.com/BoxMars/CISC704-HW/tree/main/HW1}}
 
 \section{Background}
-\subsection{Nearest Neighbors & k-Nearest Neighbors}
+\subsection{Image Recognition}
+Image recognition is the ability of AI to detect objects, places, people, writing and actions in images, which has been a popular topic in the field of computer vision. There are many datasets for image recognition, such as CIFAR-10, CIFAR-100, MNIST, etc. In this project, we will use CIFAR-10 dataset.
+\subsection{CIFAR-10}
+CIFAR-10\footnote{\url{https://www.cs.toronto.edu/~kriz/cifar.html}} is a dataset of 60000 32x32 color images in 10 classes, with 6000 images per class. 
+There are 50000 training images and 10000 test images. The dataset is divided into five training batches and one test batch, each with 10000 images. 
+The test batch contains exactly 1000 randomly-selected images from each class. 
+The training batches contain the remaining images in random order, but some training batches may contain more images from one class than another. 
+Between them, the training batches contain exactly 5000 images from each class. 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{color.png}
+    \caption{CIFAR-10}
+    \label{fig:cifar10}
+\end{figure}
+\subsection{scikit-learn\cite{scikit-learn}}
+
+scikit-learn\footnote{\url{https://scikit-learn.org/stable/}} is a free software machine learning library for the Python programming language. All algorithm used in this project are implemented by scikit-learn.  
+
+But this library has some limitations, such as it does not support GPU which means it is not suitable for large-scale machine learning.
+
+\subsection{cuML}
+cuML\footnote{\url{https://docs.rapids.ai/api/cuml/stable/}} cuML is a suite of fast, GPU-accelerated machine learning algorithms designed for data science and analytical tasks whose API mirrors that of scikit-learn. cuML enables data scientists, researchers, and software engineers to run traditional tabular ML tasks on GPUs without going into the details of CUDA programming.
+
+In this project, we use cuML to implement the k-NN classifier, SVM and PCA, which is much faster than scikit-learn.
+\section{Method}
+
+\subsection{Nearest Neighbors \& k-Nearest Neighbors}
 
 % different between NN and k-NN
 Nearest Neighbors (NN) is a simple algorithm that stores all available cases and classifies new cases based on a similarity measure (e.g., distance functions), 
@@ -89,113 +142,189 @@ Principal component analysis (PCA) is a statistical procedure that uses an ortho
 
 Support Vector Machine (SVM) is a supervised machine learning algorithm that can be used for both classification or regression challenges. However, it is mostly used in classification problems. In the SVM algorithm, we plot each data item as a point in n-dimensional space (where n is the number of features you have) with the value of each feature being the value of a particular coordinate. Then, we perform classification by finding the hyper-plane that differentiates the two classes very well.
 
-\subsection{Image Recognition}
-Image recognition is the ability of AI to detect objects, places, people, writing and actions in images, which has been a popular topic in the field of computer vision. There are many datasets for image recognition, such as CIFAR-10, CIFAR-100, MNIST, etc. In this project, we will use CIFAR-10 dataset.
-\section{Method}
-As for the NN and k-NN, we use the Euclidean distance and cosine distance to calculate the distance between the test image and the training images. 
+\subsection{Image Processing}
+The images in CIFAR-10 are 32x32 RGB images, which means each image has 32x32x3=3072 features. When we use k-NN to classify the images, the dimension of the feature space is too large, which will cause the curse of dimensionality. So we need to reduce the dimension of the feature space.
 
-\subsection{Footnotes}
+\subsection{Gary Scale}
+The first method we use is to convert the RGB images to gray scale images. The gray scale images only have one channel, which means the dimension of the feature space is reduced from 3072 to 1024.
+Fig 2 shows the gray scale images of CIFAR-10.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{gray.png}
+    \caption{Gray Scale}
+    \label{fig:gray}
+\end{figure}
+\subsection{Binary Image}
 
-Footnotes are inserted with the \verb|\footnote| command.\footnote{This is a footnote.}
+The second method we use is to convert the gray images to binary images. The binary images only have two values, 0 and 1.
+Fig 3 shows the binary images of CIFAR-10.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{binary.png}
+    \caption{Binary Image}
+    \label{fig:binary}
+\end{figure}
 
-\subsection{Tables and figures}
+\subsection{HSV}
+The third method we use is to convert the RGB images to HSV images. HSV is a color model that describes colors (hue or tint) in terms of their shade (saturation or amount of gray) and their brightness value. The HSV images have three channels.
+Fig 4 shows the HSV images of CIFAR-10.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{hsv.png}
+    \caption{HSV}
+    \label{fig:hsv}
+\end{figure}
 
-See Table~\ref{tab:accents} for an example of a table and its caption.
-\textbf{Do not override the default caption sizes.}
+\subsection{Edge Detection}
+In this project, we use \verb|skimage.feature.canny|
+\footnote{\url{https://scikit-image.org/docs/dev/api/skimage.feature.html#skimage.feature.canny}}
+to detect the edges of the images. The edge detection algorithm will return a binary image.
+Fig 5 shows the edge images of CIFAR-10.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{canny.png}
+    \caption{Edge Detection}
+    \label{fig:edge}
+\end{figure}
 
-\subsection{Hyperlinks}
+\subsection{Histogram of Oriented Gradients}
+Histogram of Oriented Gradients (HOG) is a feature descriptor used in computer vision and image processing for the purpose of object detection. 
+The technique counts occurrences of gradient orientation in localized portions of an image. 
+This method is similar to that of canny, but differs in that it is computed on a dense grid of uniformly spaced cells and uses overlapping local contrast normalization for improved accuracy.
+Fig 6 shows the HOG images of CIFAR-10.
 
-Users of older versions of \LaTeX{} may encounter the following error during compilation: 
-\begin{quote}
-\tt\verb|\pdfendlink| ended up in different nesting level than \verb|\pdfstartlink|.
-\end{quote}
-This happens when pdf\LaTeX{} is used and a citation splits across a page boundary. The best way to fix this is to upgrade \LaTeX{} to 2018-12-01 or later.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\textwidth]{hog.png}
+    \caption{Histogram of Oriented Gradients}
+    \label{fig:hog}
+\end{figure}
+\section{Experiments}
+\subsection{Download Dataset}
+CIFAR-10 dataset is available at \url{https://www.cs.toronto.edu/~kriz/cifar.html}. We can download the dataset from the website using \verb|requests| python library and unzip it using
+\verb|tarfile| library. 
 
-\subsection{Citations}
+The data file of CIFAR-10 is a binary file, which can be read using \verb|pickle| library. 
 
+\subsection{Preprocess Dataset}
 
+We use the APIs provided by scikit-learn to preprocess the dataset. The first step is to convert the RGB images to gray scale images, binary images, HSV images, edge images and HOG images.
 
-Table~\ref{citation-guide} shows the syntax supported by the style files.
-We encourage you to use the natbib styles.
-You can use the command \verb|\citet| (cite in text) to get ``author (year)'' citations, like this citation to a paper by \citet{Gusfield:97}.
-You can use the command \verb|\citep| (cite in parentheses) to get ``(author, year)'' citations \citep{Gusfield:97}.
-You can use the command \verb|\citealp| (alternative cite without parentheses) to get ``author, year'' citations, which is useful for using citations within parentheses (e.g. \citealp{Gusfield:97}).
+The second step is shuffle the dataset bescause the dataset is ordered by class and wo noticed the accuracy of unshuffled dataset is higher than shuffled dataset. 
+Before shuffling the dataset, we need to convert the dataset to numpy array, and set the random seed to 0 to make sure the result is reproducible.
 
-\subsection{References}
+\subsection{k-NN Classifier on GPU}
+We use cuML to implement the k-NN classifier on GPU. 
+\begin{lstlisting}[language=Python, caption={k-NN Classifier on GPU}]
+from cuml.neighbors import NearestNeighbors
 
-\nocite{Ando2005,augenstein-etal-2016-stance,andrew2007scalable,rasooli-tetrault-2015,goodman-etal-2016-noise,harper-2014-learning}
+classifiers = [
+    ('NN with L1 distance', NearestNeighbors(n_neighbors=1, verbose=True, metric='l1')),
+    ('NN with L2 distance', NearestNeighbors(n_neighbors=1, verbose=True, metric='l2')),
+    ('NN with cosine', NearestNeighbors(n_neighbors=1, verbose=True, metric='cosine')),
+]
+\end{lstlisting}
 
-The \LaTeX{} and Bib\TeX{} style files provided roughly follow the American Psychological Association format.
-If your own bib file is named \texttt{custom.bib}, then placing the following before any appendices in your \LaTeX{} file will generate the references section for you:
-\begin{quote}
-\begin{verbatim}
-\bibliographystyle{acl_natbib}
-\bibliography{custom}
-\end{verbatim}
-\end{quote}
-You can obtain the complete ACL Anthology as a Bib\TeX{} file from \url{https://aclweb.org/anthology/anthology.bib.gz}.
-To include both the Anthology and your own .bib file, use the following instead of the above.
-\begin{quote}
-\begin{verbatim}
-\bibliographystyle{acl_natbib}
+When \verb|n_neighbors| is $1$, it is the NN classifier. We use three different distance metrics, L1 distance, L2 distance and cosine distance and test the performance of different \verb|n_neighbors| from $1$ to $20$.
+The reslut is shown in Fig 7. From the result, we can see that the accuracy of NN with L1 distance is higher than L2 distance and cosine distance, and the image with hog feature has the highest accuracy, and the second is the image with gray scale feature.
+
+The accuracy of the classifier will increase as the number of neighbors increases. 
+When the number of neighbors is larger than $5$, the accuracy of the classifier will not increase significantly.
+
+\begin{lstlisting}[language=Python,caption={k-NN Classifier on GPU with different neighbors}]
+def predict(classifiers, train_imgs, train_labels, test_imgs):
+  train_imgs = train_imgs.reshape((50000, -1))
+  test_imgs = test_imgs.reshape((10000, -1))
+
+  # shuffle data
+  np.random.seed(0)
+  np.random.shuffle(train_imgs)
+  np.random.seed(0)
+  np.random.shuffle(train_labels)
+  np.random.seed(0)
+  np.random.shuffle(test_imgs)
+  np.random.seed(0)
+  np.random.shuffle(test_labels)
+  
+
+  # combination of train img and label
+  train = np.hstack((train_imgs, train_labels))
+  test = np.hstack((test_imgs, test_labels))
+
+  accs={}
+  for name, model in classifiers:
+      accs[name] = []
+      model.fit(train)
+      for i in range(1,21):
+          distance, indices = model.kneighbors(test, n_neighbors=i, return_distance=True)
+      
+          pred = train_labels[indices]
+          # find the most common label
+          pred = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=1, arr=pred)
+          
+          pred = pred.reshape((10000, 1))
+          acc = accuracy_score(test_labels, pred)
+          # print('Accuracy of {} - k: {}: {}'.format(name, i, acc))
+          accs[name].append(acc)
+  return accs
+\end{lstlisting}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{knn.png}
+    \caption{Accuracy of k-NN with different number of neighbors}
+    \label{fig:knn}
+\end{figure}
+
+\subsection{PCA}
+We use cuML to implement the PCA algorithm on GPU, and use the PCA to reduce the dimension of the feature space.
+The reslut accuracy of k-NN with PCA with different number of components is shown in Fig 8. From the result, we can see that the accuracy of the classifier will increase as the number of components increases. 
+When the number of components is larger than $10$, the accuracy of the classifier will not increase significantly.
+
+\begin{lstlisting}[language=Python, caption={PCA}]
+from cuml import PCA
+
+pca = PCA(whiten=True, n_components=1)
+pca.fit(train_gray.reshape((50000, -1)).astype(np.float32))
+  
+train_pca = pca.transform(train_gray.reshape((50000, -1)).astype(np.float32))
+test_pca = pca.transform(test_gray.reshape((10000, -1)).astype(np.float32))
+\end{lstlisting}
+
+We test the performance of three k-NN classifier with PCA on GPU with different \verb|n_components| from $1$ to $20$, the reslut is shown in Fig 8.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{pca.png}
+    \caption{Accuracy of k-NN with PCA with different number of components}
+    \label{fig:pca}
+\end{figure}
+
+\subsection{SVM}
+
+We use cuML to implement the SVM algorithm on GPU. The reslut accuracy of SVM with different kernel is shown in Fig 9.
+
+The accuracy of SVM classifier is not very high, and the accuracy of Linear SVM with L2 is hightest.
+\begin{lstlisting}[language=Python, caption={SVM}]
+from cuml import LinearSVC, SVC
+classifiers = [
+    ('Linear SVM l1', LinearSVC(penalty='l1', loss='squared_hinge', tol=1e-4, C=1.0)),
+    ('Linear SVM l2', LinearSVC(penalty='l2', loss='squared_hinge', tol=1e-4, C=1.0)),
+    ('SVM rbf', SVC(C=1.0, kernel='rbf', gamma='auto', tol=1e-3)),
+    ('SVM sigmoid', SVC(C=1.0, kernel='sigmoid', gamma='auto', tol=1e-3)),
+]
+\end{lstlisting}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{svm.png}
+    \caption{Accuracy of SVM with different kernel}
+    \label{fig:svm}
+\end{figure}
+
+\section{Conclusion}
+
+In this project, we implement a k-NN classifier to recognize the images in CIFAR-10 dataset. We use different image processing methods to preprocess the dataset, and use different distance metrics to test the performance of the classifier. We also implement a k-NN with PCA classifier, SVM and NN, to compare the performance of the k-NN.
+
 \bibliography{anthology,custom}
-\end{verbatim}
-\end{quote}
-Please see Section~\ref{sec:bibtex} for information on preparing Bib\TeX{} files.
-
-\subsection{Appendices}
-
-Use \verb|\appendix| before any appendix section to switch the section numbering over to letters. See Appendix~\ref{sec:appendix} for an example.
-
-\section{Bib\TeX{} Files}
-\label{sec:bibtex}
-
-Unicode cannot be used in Bib\TeX{} entries, and some ways of typing special characters can disrupt Bib\TeX's alphabetization. The recommended way of typing special characters is shown in Table~\ref{tab:accents}.
-
-Please ensure that Bib\TeX{} records contain DOIs or URLs when possible, and for all the ACL materials that you reference.
-Use the \verb|doi| field for DOIs and the \verb|url| field for URLs.
-If a Bib\TeX{} entry has a URL or DOI field, the paper title in the references section will appear as a hyperlink to the paper, using the hyperref \LaTeX{} package.
-
-\section*{Limitations}
-ACL 2023 requires all submissions to have a section titled ``Limitations'', for discussing the limitations of the paper as a complement to the discussion of strengths in the main text. This section should occur after the conclusion, but before the references. It will not count towards the page limit.
-The discussion of limitations is mandatory. Papers without a limitation section will be desk-rejected without review.
-
-While we are open to different types of limitations, just mentioning that a set of results have been shown for English only probably does not reflect what we expect. 
-Mentioning that the method works mostly for languages with limited morphology, like English, is a much better alternative.
-In addition, limitations such as low scalability to long text, the requirement of large GPU resources, or other things that inspire crucial further investigation are welcome.
-
-\section*{Ethics Statement}
-Scientific work published at ACL 2023 must comply with the ACL Ethics Policy.\footnote{\url{https://www.aclweb.org/portal/content/acl-code-ethics}} We encourage all authors to include an explicit ethics statement on the broader impact of the work, or other ethical considerations after the conclusion but before the references. The ethics statement will not count toward the page limit (8 pages for long, 4 pages for short papers).
-
-\section*{Acknowledgements}
-This document has been adapted by Jordan Boyd-Graber, Naoaki Okazaki, Anna Rogers from the style files used for earlier ACL, EMNLP and NAACL proceedings, including those for
-EACL 2023 by Isabelle Augenstein and Andreas Vlachos,
-EMNLP 2022 by Yue Zhang, Ryan Cotterell and Lea Frermann,
-ACL 2020 by Steven Bethard, Ryan Cotterell and Rui Yan,
-ACL 2019 by Douwe Kiela and Ivan Vuli\'{c},
-NAACL 2019 by Stephanie Lukin and Alla Roskovskaya, 
-ACL 2018 by Shay Cohen, Kevin Gimpel, and Wei Lu, 
-NAACL 2018 by Margaret Mitchell and Stephanie Lukin,
-Bib\TeX{} suggestions for (NA)ACL 2017/2018 from Jason Eisner,
-ACL 2017 by Dan Gildea and Min-Yen Kan, NAACL 2017 by Margaret Mitchell, 
-ACL 2012 by Maggie Li and Michael White, 
-ACL 2010 by Jing-Shin Chang and Philipp Koehn, 
-ACL 2008 by Johanna D. Moore, Simone Teufel, James Allan, and Sadaoki Furui, 
-ACL 2005 by Hwee Tou Ng and Kemal Oflazer, 
-ACL 2002 by Eugene Charniak and Dekang Lin, 
-and earlier ACL and EACL formats written by several people, including
-John Chen, Henry S. Thompson and Donald Walker.
-Additional elements were taken from the formatting instructions of the \emph{International Joint Conference on Artificial Intelligence} and the \emph{Conference on Computer Vision and Pattern Recognition}.
-
-% Entries for the entire Anthology, followed by custom entries
-\bibliography{anthology,custom}
 \bibliographystyle{acl_natbib}
-
-\appendix
-
-\section{Example Appendix}
-\label{sec:appendix}
-
-This is a section in the appendix.
 
 \end{document}
